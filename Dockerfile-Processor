@@ -1,0 +1,29 @@
+FROM golang:latest as builder
+
+RUN mkdir processor
+WORKDIR /processor
+
+COPY go.mod .
+COPY go.sum .
+
+COPY lib/processor ./lib/processor
+COPY cmd/processor ./cmd/processor
+COPY shared ./shared
+
+RUN go get ./...
+
+RUN CGO_ENABLED=0 GOOS=linux go build -o processor_service cmd/processor/main.go
+
+FROM alpine:latest
+
+RUN apk update && apk add --no-cache bash
+
+WORKDIR /catbyte/processor
+
+COPY --from=builder /processor/processor_service .
+
+RUN chmod +x processor_service
+
+# Expose ports here
+
+CMD ["./processor_service"]

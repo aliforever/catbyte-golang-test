@@ -1,0 +1,29 @@
+FROM golang:latest as builder
+
+RUN mkdir reporter_api
+WORKDIR /reporter_api
+
+COPY go.mod .
+COPY go.sum .
+
+COPY lib/reporting-api ./lib/reporting-api
+COPY cmd/reporting-api ./cmd/reporting-api
+COPY shared ./shared
+
+RUN go get ./...
+
+RUN CGO_ENABLED=0 GOOS=linux go build -o reporter_api_service cmd/reporting-api/main.go
+
+FROM alpine:latest
+
+RUN apk update && apk add --no-cache bash
+
+WORKDIR /catbyte/reporter_api
+
+COPY --from=builder /reporter_api/reporter_api_service .
+
+RUN chmod +x reporter_api_service
+
+# Expose ports here
+
+CMD ["./reporter_api_service"]

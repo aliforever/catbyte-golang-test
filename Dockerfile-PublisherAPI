@@ -1,0 +1,29 @@
+FROM golang:latest as builder
+
+RUN mkdir publisher_api
+WORKDIR /publisher_api
+
+COPY go.mod .
+COPY go.sum .
+
+COPY lib/publishing-api ./lib/publishing-api
+COPY cmd/publishing-api ./cmd/publishing-api
+COPY shared ./shared
+
+RUN go get ./...
+
+RUN CGO_ENABLED=0 GOOS=linux go build -o publisher_api_service cmd/publishing-api/main.go
+
+FROM alpine:latest
+
+RUN apk update && apk add --no-cache bash
+
+WORKDIR /catbyte/publisher_api
+
+COPY --from=builder /publisher_api/publisher_api_service .
+
+RUN chmod +x publisher_api_service
+
+# Expose ports here
+
+CMD ["./publisher_api_service"]
